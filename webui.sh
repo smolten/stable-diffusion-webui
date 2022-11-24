@@ -82,8 +82,8 @@ then
     clone_dir="${PWD##*/}"
 fi
 
-# Check prequisites
-for preq in git python3
+# Check prerequisites
+for preq in "${GIT}" "${python_cmd}"
 do
     if ! hash "${preq}" &>/dev/null
     then
@@ -102,15 +102,14 @@ then
     exit 1
 fi
 
-printf "\n%s\n" "${delimiter}"
-printf "Clone or update stable-diffusion-webui"
-printf "\n%s\n" "${delimiter}"
 cd "${install_dir}"/ || { printf "\e[1m\e[31mERROR: Can't cd to %s/, aborting...\e[0m" "${install_dir}"; exit 1; }
 if [[ -d "${clone_dir}" ]]
 then
     cd "${clone_dir}"/ || { printf "\e[1m\e[31mERROR: Can't cd to %s/%s/, aborting...\e[0m" "${install_dir}" "${clone_dir}"; exit 1; }
-    "${GIT}" pull
 else
+    printf "\n%s\n" "${delimiter}"
+    printf "Clone stable-diffusion-webui"
+    printf "\n%s\n" "${delimiter}"
     "${GIT}" clone https://github.com/AUTOMATIC1111/stable-diffusion-webui.git "${clone_dir}"
     cd "${clone_dir}"/ || { printf "\e[1m\e[31mERROR: Can't cd to %s/%s/, aborting...\e[0m" "${install_dir}" "${clone_dir}"; exit 1; }
 fi
@@ -135,7 +134,15 @@ else
     exit 1
 fi
 
-printf "\n%s\n" "${delimiter}"
-printf "Launching launch.py..."
-printf "\n%s\n" "${delimiter}"
-"${python_cmd}" "${LAUNCH_SCRIPT}"
+if [[ ! -z "${ACCELERATE}" ]] && [ ${ACCELERATE}="True" ] && [ -x "$(command -v accelerate)" ]
+then
+    printf "\n%s\n" "${delimiter}"
+    printf "Accelerating launch.py..."
+    printf "\n%s\n" "${delimiter}"
+    accelerate launch --num_cpu_threads_per_process=6 "${LAUNCH_SCRIPT}" "$@"
+else
+    printf "\n%s\n" "${delimiter}"
+    printf "Launching launch.py..."
+    printf "\n%s\n" "${delimiter}"
+    "${python_cmd}" "${LAUNCH_SCRIPT}" "$@"
+fi
