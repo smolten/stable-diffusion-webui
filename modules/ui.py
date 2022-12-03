@@ -19,7 +19,7 @@ import numpy as np
 from PIL import Image, PngImagePlugin
 from modules.call_queue import wrap_gradio_gpu_call, wrap_queued_call, wrap_gradio_call
 
-from modules import sd_hijack, sd_models, localization, script_callbacks, ui_extensions, deepbooru
+from modules import sd_hijack, sd_models, localization, script_callbacks, ui_extensions, deepbooru, images
 from modules.paths import script_path
 
 from modules.shared import opts, cmd_opts, restricted_opts
@@ -1099,8 +1099,30 @@ def create_ui():
                     buttons = parameters_copypaste.create_buttons(["txt2img", "img2img", "inpaint", "extras"])
                 parameters_copypaste.bind_buttons(buttons, image, generation_info)
 
+        def run_pnginfo(image):
+            if image is None:
+                return '', '', ''
+
+            geninfo, items = images.read_info_from_image(image)
+            items = {**{'parameters': geninfo}, **items}
+
+            info = ''
+            for key, text in items.items():
+                info += f"""
+<div>
+<p><b>{plaintext_to_html(str(key))}</b></p>
+<p>{plaintext_to_html(str(text))}</p>
+</div>
+""".strip()+"\n"
+
+            if len(info) == 0:
+                message = "Nothing found in the image."
+                info = f"<div><p>{message}<p></div>"
+
+            return '', geninfo, info
+
         image.change(
-            fn=wrap_gradio_call(modules.extras.run_pnginfo),
+            fn=run_pnginfo,
             inputs=[image],
             outputs=[html, generation_info, html2],
         )
